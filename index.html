@@ -1,0 +1,142 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simple Survival Game</title>
+  <style>
+    body { margin: 0; background: #111; overflow: hidden; color: white; }
+    canvas { display: block; margin: 0 auto; background: #222; }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;// Load images
+const playerImg = new Image();
+playerImg.src = 'assets/player.png'; // pointer
+
+const enemyImg = new Image();
+enemyImg.src = 'assets/enemy.png'; // fire
+
+const healImg = new Image();
+healImg.src = 'assets/heal.png'; // green sun+
+
+const keys = {};
+
+class Entity {
+  constructor(x, y, w, h, img) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    this.img = img;
+  }
+  draw() {
+    if(this.img.complete) {
+      ctx.drawImage(this.img, this.x, this.y, this.w, this.h);
+    } else {
+      ctx.fillStyle = 'white';
+      ctx.fillRect(this.x, this.y, this.w, this.h);
+    }
+  }
+}
+
+class Player extends Entity {
+  constructor(x, y) {
+    super(x, y, 50, 50, playerImg);
+    this.speed = 4;
+    this.hp = 100;
+  }
+  update() {
+    if(keys['ArrowUp'] || keys['w']) this.y -= this.speed;
+    if(keys['ArrowDown'] || keys['s']) this.y += this.speed;
+    if(keys['ArrowLeft'] || keys['a']) this.x -= this.speed;
+    if(keys['ArrowRight'] || keys['d']) this.x += this.speed;
+  }
+}
+
+class Enemy extends Entity {
+  constructor(x, y) {
+    super(x, y, 50, 50, enemyImg);
+    this.speed = 2;
+  }
+  update(player) {
+    let dx = player.x - this.x;
+    let dy = player.y - this.y;
+    let dist = Math.hypot(dx, dy);
+    if(dist > 0) {
+      this.x += this.speed * dx / dist;
+      this.y += this.speed * dy / dist;
+    }
+  }
+}
+
+class Heal extends Entity {
+  constructor(x, y) {
+    super(x, y, 40, 40, healImg);
+  }
+}
+
+const player = new Player(canvas.width/2, canvas.height/2);
+const enemies = [];
+const heals = [];
+
+function spawnEnemy() {
+  let edge = Math.floor(Math.random()*4);
+  let x, y;
+  if(edge === 0){ x = 0; y = Math.random()*canvas.height; }
+  else if(edge === 1){ x = canvas.width; y = Math.random()*canvas.height; }
+  else if(edge === 2){ x = Math.random()*canvas.width; y = 0; }
+  else { x = Math.random()*canvas.width; y = canvas.height; }
+  enemies.push(new Enemy(x,y));
+}
+
+function spawnHeal() {
+  let x = Math.random()*canvas.width;
+  let y = Math.random()*canvas.height;
+  heals.push(new Heal(x,y));
+}
+
+window.addEventListener('keydown', e => { keys[e.key] = true; });
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+function update() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  player.update();
+  player.draw();
+
+  enemies.forEach((enemy, i) => {
+    enemy.update(player);
+    enemy.draw();
+    if (Math.hypot(player.x-enemy.x, player.y-enemy.y) < 40) {
+      player.hp -= 0.2;
+    }
+  });
+
+  heals.forEach((heal,i)=>{
+    heal.draw();
+    if(Math.hypot(player.x-heal.x, player.y-heal.y) < 40){
+      player.hp = Math.min(100, player.hp + 20);
+      heals.splice(i,1);
+    }
+  });
+
+  ctx.fillStyle = 'white';
+  ctx.font = '20px Arial';
+  ctx.fillText('HP: ' + Math.round(player.hp), 20, 30);
+
+  requestAnimationFrame(update);
+}
+
+setInterval(spawnEnemy, 3000);
+setInterval(spawnHeal, 7000);
+
+update();
+
+  </script>
+</body>
+</html>
